@@ -30,50 +30,64 @@
 #ifndef RVIZ_IMAGE_DISPLAY_H
 #define RVIZ_IMAGE_DISPLAY_H
 
-#ifndef Q_MOC_RUN  // See: https://bugreports.qt-project.org/browse/QTBUG-22829
-# include <QObject>
+#ifndef Q_MOC_RUN // See: https://bugreports.qt-project.org/browse/QTBUG-22829
+#include <QObject>
 
-# include <OgreMaterial.h>
-# include <OgreRenderTargetListener.h>
-# include <OgreSharedPtr.h>
+#include <OgreMaterial.h>
+#include <OgreRenderTargetListener.h>
+#include <OgreSharedPtr.h>
 
-# include "rviz/image/image_display_base.h"
-# include "rviz/image/ros_image_texture.h"
-# include "rviz/render_panel.h"
+#include "rviz/image/image_display_base.h"
+#include "rviz/image/ros_image_texture.h"
+#include "rviz/render_panel.h"
 
-# include "rviz/properties/bool_property.h"
-# include "rviz/properties/float_property.h"
-# include "rviz/properties/int_property.h"
+#include "rviz/properties/bool_property.h"
+#include "rviz/properties/float_property.h"
+#include "rviz/properties/int_property.h"
 #endif
 
-
-namespace Ogre
-{
+namespace Ogre {
 class SceneNode;
 class Rectangle2D;
 }
 
-namespace rviz
-{
+namespace rviz {
+typedef boost::function<void(QMouseEvent *)> MouseEventHandler;
 
+class InteractiveRenderPanel : public RenderPanel {
+  Q_OBJECT
+public:
+  InteractiveRenderPanel(QWidget *parent = 0) : RenderPanel(parent) {}
+
+  virtual void mouseMoveEvent(QMouseEvent *event);
+  virtual void mousePressEvent(QMouseEvent *event);
+  virtual void mouseReleaseEvent(QMouseEvent *event);
+  virtual void mouseDoubleClickEvent(QMouseEvent *event);
+
+Q_SIGNALS:
+  void mouseEventHandler(QMouseEvent *event);
+
+private:
+  MouseEventHandler mouse_event_handler_;
+};
 /**
  * \class ImageDisplay
  *
  */
-class ImageDisplay: public ImageDisplayBase
-{
-Q_OBJECT
+class ImageDisplay : public ImageDisplayBase {
+  Q_OBJECT
 public:
   ImageDisplay();
   virtual ~ImageDisplay();
 
   // Overrides from Display
   virtual void onInitialize();
-  virtual void update( float wall_dt, float ros_dt );
+  virtual void update(float wall_dt, float ros_dt);
   virtual void reset();
 
 public Q_SLOTS:
   virtual void updateNormalizeOptions();
+  void mouseEventHandler(QMouseEvent *event);
 
 protected:
   // overrides from Display
@@ -81,26 +95,38 @@ protected:
   virtual void onDisable();
 
   /* This is called by incomingMessage(). */
-  virtual void processMessage(const sensor_msgs::Image::ConstPtr& msg);
+  virtual void processMessage(const sensor_msgs::Image::ConstPtr &msg);
 
 private:
   void clear();
   void updateStatus();
+  void updateTopic();
 
-  Ogre::SceneManager* img_scene_manager_;
-  Ogre::SceneNode* img_scene_node_;
-  Ogre::Rectangle2D* screen_rect_;
+  Ogre::SceneManager *img_scene_manager_;
+  Ogre::SceneNode *img_scene_node_;
+  Ogre::Rectangle2D *screen_rect_;
   Ogre::MaterialPtr material_;
 
   ROSImageTexture texture_;
 
-  RenderPanel* render_panel_;
+  InteractiveRenderPanel *render_panel_;
 
-  BoolProperty* normalize_property_;
-  FloatProperty* min_property_;
-  FloatProperty* max_property_;
-  IntProperty* median_buffer_size_property_;
+  BoolProperty *normalize_property_;
+  FloatProperty *min_property_;
+  FloatProperty *max_property_;
+  IntProperty *median_buffer_size_property_;
   bool got_float_image_;
+
+  StringProperty *topic_property_;
+
+  ros::NodeHandle nh_;
+  ros::Publisher pub_;
+
+  float img_scale_;
+  float img_width_;
+  float img_height_;
+  float img_xoffset_;
+  float img_yoffset_;
 };
 
 } // namespace rviz
